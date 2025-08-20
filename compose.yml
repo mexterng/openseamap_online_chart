@@ -1,0 +1,8 @@
+services:
+  web:
+    image: richarvey/nginx-php-fpm:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/var/www/html
+    container_name: web
