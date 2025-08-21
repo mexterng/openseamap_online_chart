@@ -208,12 +208,12 @@ function NauticalRoute_getPoints(points) {
           Math.abs(points[i].x - previousPoints[i].x) > 1e-6 ||
           Math.abs(points[i].y - previousPoints[i].y) > 1e-6) {
         deletedIndex = i;
+        deletedIndex--; // adjust because comment belongs to previous segment
         break;
       }
     }
   }
 
-  deletedIndex--; // adjust because comment belongs to previous segment
 
   // store current input values excluding deleted point, renumbered from 0
   const currentValues = [];
