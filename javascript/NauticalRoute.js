@@ -32,6 +32,7 @@ var routeDraw;
 var routeEdit;
 
 var routeTrack;
+let previousPoints = [];
 var routeObject;
 
 var style_edit = {
@@ -199,70 +200,83 @@ function NauticalRoute_routeModified(event) {
 }
 
 function NauticalRoute_getPoints(points) {
+  // determine deleted index
+  let deletedIndex = -1;
+  if (previousPoints.length && previousPoints.length !== points.length) {
+    for (let i = 0; i < previousPoints.length; i++) {
+      if (!points[i] ||
+          Math.abs(points[i].x - previousPoints[i].x) > 1e-6 ||
+          Math.abs(points[i].y - previousPoints[i].y) > 1e-6) {
+        deletedIndex = i;
+        break;
+      }
+    }
+  }
+
+  deletedIndex--; // adjust because comment belongs to previous segment
+
+  // store current input values excluding deleted point, renumbered from 0
+  const currentValues = [];
+  document.querySelectorAll("#routeSegmentList input[id^='desc_']").forEach((input, i) => {
+    if (i !== deletedIndex) {
+      currentValues.push(input.value);
+    }
+  });
+
+  // store current points for next comparison
+  previousPoints = points.map(p => ({ ...p })); // shallow copy
+
   var htmlText;
-  var latA, latB, lonA, lonB, distance, bearing;
+  var distance, bearing;
   var totalDistance = 0;
   var distUnits = document.getElementById("distUnits").value;
+
+  // function to format coordinates
   var coordFormat = function (lat, lon) {
     return (
       formatCoords(lat, "N __.___°") + " - " + formatCoords(lon, "W___.___°")
     );
   };
 
+  // use DMS format if selected
   if (document.getElementById("coordFormat").value == "coordFormatdms") {
     coordFormat = function (lat, lon) {
-      return (
-        formatCoords(lat, "N __°##'##\"") +
-        " - " +
-        formatCoords(lon, "W___°##'##\"")
-      );
+      return formatCoords(lat, "N __°##'##\"") + " - " + formatCoords(lon, "W___°##'##\"");
     };
   }
 
+  // start building table HTML
   htmlText = '<table id="routeSegmentList">';
-  htmlText +=
-    "<tr><th/>" +
-    "<th>" +
-    tableTextNauticalRouteCourse +
-    "</th>" +
-    "<th>" +
-    tableTextNauticalRouteDistance +
-    "</th>" +
-    "<th>" +
-    tableTextNauticalRouteCoordinate +
-    "</th></tr>";
+  htmlText += "<tr><th/>" +
+              "<th>" + tableTextNauticalRouteCourse + "</th>" +
+              "<th>" + tableTextNauticalRouteDistance + "</th>" +
+              "<th>" + tableTextNauticalRouteCoordinate + "</th>" +
+              "<th>" + tableTextNauticalRouteDescription + "</th>" + 
+              "</tr>";
+
+  // loop through points to calculate distance, bearing and render table rows
   for (i = 0; i < points.length - 1; i++) {
-    const [lon0, lat0] = ol.proj.toLonLat([points[i].x, points[i].y]);
-    const [lon1, lat1] = ol.proj.toLonLat([points[i + 1].x, points[i + 1].y]);
-    latA = lat0;
-    lonA = lon0;
-    latB = lat1;
-    lonB = lon1;
+    const [lonA, latA] = ol.proj.toLonLat([points[i].x, points[i].y]);
+    const [lonB, latB] = ol.proj.toLonLat([points[i + 1].x, points[i + 1].y]);
     distance = getDistance(latA, latB, lonA, lonB);
     if (distUnits == "km") {
       distance = nm2km(distance);
     }
     bearing = getBearing(latA, latB, lonA, lonB);
     totalDistance += distance;
-    htmlText +=
-      "<tr>" +
-      "<td>" +
-      parseInt(i + 1) +
-      ".</td>" +
-      "<td>" +
-      bearing.toFixed(2) +
-      "°</td>" +
-      "<td>" +
-      distance.toFixed(2) +
-      " " +
-      distUnits +
-      "</td>" +
-      "<td>" +
-      coordFormat(latB, lonB) +
-      "</td></tr>";
+    // restore previous input value if available
+    const descValue = currentValues[i] || "";
+    htmlText += "<tr>" +
+              "<td>" + (i + 1) + ".</td>" +
+              "<td>" + bearing.toFixed(2) + "°</td>" +
+              "<td>" + distance.toFixed(2) + " " + distUnits + "</td>" +
+              "<td>" + coordFormat(latB, lonB) + "</td>" +
+              "<td><input type='text' id='desc_" + i + "' value='" + descValue + "'></td>" +
+              "</tr>";
   }
   htmlText += "</table>";
 
+  // display start and end coordinates 
   const [lon0, lat0] = ol.proj.toLonLat([points[0].x, points[0].y]);
   const [lon1, lat1] = ol.proj.toLonLat([
     points[points.length - 1].x,
@@ -284,53 +298,59 @@ function NauticalRoute_getRouteCsv(points) {
     tableTextNauticalRouteDistance +
     ";" +
     tableTextNauticalRouteCoordinate +
+    ";" +
+    tableTextNauticalRouteDescription +
     "\n";
-  var latA, latB, lonA, lonB, distance, bearing;
   var totalDistance = 0;
 
-  for (i = 0; i < points.length - 1; i++) {
-    const [lon0, lat0] = ol.proj.toLonLat([points[i].x, points[i].y]);
-    const [lon1, lat1] = ol.proj.toLonLat([points[i + 1].x, points[i + 1].y]);
-    latA = lat0;
-    lonA = lon0;
-    latB = lat1;
-    lonB = lon1;
-    distance = getDistance(latA, latB, lonA, lonB).toFixed(2);
-    bearing = getBearing(latA, latB, lonA, lonB).toFixed(2);
-    totalDistance += parseFloat(distance);
-    buffText += parseInt(i + 1) + ";" + bearing + "°;" + distance + 'nm;"';
+  for (let i = 0; i < points.length - 1; i++) {
+    const [lonA, latA] = ol.proj.toLonLat([points[i].x, points[i].y]);
+    const [lonB, latB] = ol.proj.toLonLat([points[i + 1].x, points[i + 1].y]);
 
+    const distance = getDistance(latA, latB, lonA, lonB).toFixed(2);
+    const bearing = getBearing(latA, latB, lonA, lonB).toFixed(2);
+    totalDistance += parseFloat(distance);
+
+    let coordText = "";
     if (document.getElementById("coordFormat").value == "coordFormatdms") {
-      buffText +=
-        formatCoords(latB, "N___°##.####'") +
-        " - " +
-        formatCoords(lonB, "W___°##.####'");
+      coordText = formatCoords(latB, "N___°##.####'") + " - " + formatCoords(lonB, "W___°##.####'");
     } else {
-      buffText +=
-        formatCoords(lat, "N __.___°") + " - " + formatCoords(lon, "W___.___°");
+      coordText = formatCoords(latB, "N __.___°") + " - " + formatCoords(lonB, "W___.___°");
     }
-    buffText += '"\n';
+
+    const description = document.getElementById("desc_" + i)?.value || "";
+
+    buffText +=
+      parseInt(i + 1) + ";" +
+      bearing + "°;" +
+      distance + "nm;\"" +
+      coordText + "\";\"" +
+      description + "\"\n";
   }
 
   return convert2Text(buffText);
 }
 
 function NauticalRoute_getRouteKml(feature) {
-  // var latA, lonA;
-  // var buffText = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<kml xmlns=\"http://earth.google.com/kml/2.0\">\n";
-  // buffText += "<Folder>\n<name>OpenSeaMap Route</name>\n<description>test</description>";
-  // buffText += "<Placemark>\n<name>OpenSeaMap</name>\n<description>No description available</description>";
-  // buffText += "<LineString>\n<coordinates>\n";
-  // for(i = 0; i < points.length; i++) {
-  //     latA = y2lat(points[i].y);
-  //     lonA = x2lon(points[i].x);
-  //     buffText += lonA + "," + latA + " ";
-  // }
-  // buffText += "\n</coordinates>\n</LineString>\n</Placemark>\n</Folder>\n</kml>";
-
-  // return buffText;
-
+  // create KML parser
   var parser = new ol.format.KML();
+
+  // check if geometry is LineString
+  if (feature.getGeometry().getType() === "LineString") {
+    const coords = feature.getGeometry().getCoordinates();
+    let descriptions = [];
+
+    // iterate through coordinates and get descriptions
+    coords.forEach((coord, i) => {
+      let desc = feature.get("descriptions")?.[i] || "";
+      descriptions.push(`Point ${i + 1}: ${desc}`);
+    });
+
+    // set combined descriptions as feature property
+    feature.set("description", descriptions.join("\n"));
+  }
+
+  // export feature as KML
   return parser.writeFeatures([feature], {
     featureProjection: map.getView().getProjection(),
     dataProjection: "EPSG:4326",
@@ -338,28 +358,52 @@ function NauticalRoute_getRouteKml(feature) {
 }
 
 function NauticalRoute_getRouteGpx(feature) {
+  // create GPX parser
   var parser = new ol.format.GPX();
+
+  // check if geometry is LineString
+  if (feature.getGeometry().getType() === "LineString") {
+    const coords = feature.getGeometry().getCoordinates();
+    let descriptions = [];
+
+    // iterate through coordinates and get descriptions
+    coords.forEach((coord, i) => {
+      let desc = feature.get("descriptions")?.[i] || "";
+      descriptions.push(`Point ${i + 1}: ${desc}`);
+    });
+
+    // set combined descriptions as feature property
+    feature.set("description", descriptions.join("\n"));
+  }
+
+  // export feature as GPX
   return parser.writeFeatures([feature], {
     featureProjection: map.getView().getProjection(),
     dataProjection: "EPSG:4326",
   });
 }
 
-function NauticalRoute_getRouteGml(points) {
-  // GML2 parser is not implmented in ol7 and GML3 doesn not work.
-  // var parser = new ol.format.GML32();
-  // return parser.writeFeatures([feature], {
-  //     featureProjection: map.getView().getProjection(),
-  //     dataProjection: 'EPSG:4326'
-  // });
+function NauticalRoute_getRouteGml(points, descriptions) {
+  // build coordinates text
   let coordText = "";
-  for (i = 0; i < points.length; i++) {
+  for (let i = 0; i < points.length; i++) {
     const [lonA, latA] = ol.proj.toLonLat([points[i].x, points[i].y]);
     coordText += lonA + "," + latA + " ";
   }
+
+  // build description text
+  let descText = "";
+  if (descriptions && descriptions.length > 0) {
+    descText = descriptions.map((d, i) => `Point ${i + 1}: ${d}`).join("\n");
+  } else {
+    descText = "No description available";
+  }
+
+  // return GML string
   const gml = `
 <gml:featureMember xmlns:gml="http://www.opengis.net/gml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengis.net/gml http://schemas.opengis.net/gml/2.1.2/feature.xsd">
     <gml:null>
+        <gml:description>${descText}</gml:description>
         <gml:geometry>
             <gml:LineString>
                 <gml:coordinates decimal="." cs="," ts=" ">${coordText}</gml:coordinates>

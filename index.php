@@ -68,6 +68,7 @@
             var tableTextNauticalRouteCoordinate = "<?=$t->tr('coordinate')?>";
             var tableTextNauticalRouteCourse = "<?=$t->tr('course')?>";
             var tableTextNauticalRouteDistance = "<?=$t->tr('distance')?>";
+            var tableTextNauticalRouteDescription = "<?=$t->tr('description')?>";
 
             // Set language
             var language = "<?=$t->getCurrentLanguage()?>";
@@ -352,7 +353,7 @@
                 htmlText += "<img src=\"./resources/action/info.png\"  width=\"17\" height=\"17\" onClick=\"showMapKey('help-trip-planner');\"/>";
                 htmlText += "<img src=\"./resources/action/close.gif\" onClick=\"if (!routeChanged || confirm('<?=$t->tr("confirmCloseRoute")?>')) {closeNauticalRoute();}\"/></div>";
                 htmlText += "<h3><?=$t->tr("tripPlanner")?>: <input type=\"text\" id=\"tripName\" size=\"20\"></h3><br/>";
-                htmlText += "<table border=\"0\" width=\"370px\">";
+                htmlText += "<table border=\"0\">";
                 htmlText += "<tr><td><?=$t->tr("start")?></td><td id=\"routeStart\">- - -</td></tr>";
                 htmlText += "<tr><td><?=$t->tr("finish")?></td><td id=\"routeEnd\">- - -</td></tr>";
                 htmlText += "<tr><td><?=$t->tr("distance")?></td><td id=\"routeDistance\">- - -</td></tr>";
