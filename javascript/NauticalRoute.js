@@ -226,7 +226,7 @@ function NauticalRoute_getPoints(points) {
       if (!points[i] ||
           Math.abs(points[i].x - previousPoints[i].x) > 1e-6 ||
           Math.abs(points[i].y - previousPoints[i].y) > 1e-6) {
-        addedIndex = i + 1;
+        addedIndex = i - 1;
         break;
       }
     }
