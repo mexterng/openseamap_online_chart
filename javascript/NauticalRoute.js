@@ -67,10 +67,30 @@ function NauticalRoute_startEditMode() {
     type: "LineString",
     source: layer_nautical_route.getSource(),
   });
+  // once drawing starts -> listen for geometry changes
+  routeDraw.on("drawstart", (event) => {
+    const geom = event.feature.getGeometry();
+
+    geom.on("change", () => {
+      const coords = geom.getCoordinates();
+      routeTrack = coords.map(([x, y]) => ({ x, y }));
+      NauticalRoute_getPoints(routeTrack);
+    });
+  });
   routeDraw.on("drawend", NauticalRoute_routeAdded);
   routeEdit = new ol.interaction.Modify({
     source: layer_nautical_route.getSource(),
     style: modifyStyle,
+  });
+  // on start of a modification -> listen for geometry changes
+  routeEdit.on("modifystart", (event) => {
+    const feature = event.features.item(0);
+    const geom = feature.getGeometry();
+
+    geom.on("change", () => {
+      routeTrack = geom.getCoordinates().map(([x, y]) => ({ x, y }));
+      NauticalRoute_getPoints(routeTrack);
+    });
   });
   routeEdit.on("modifyend", NauticalRoute_routeModified);
   map.addInteraction(routeDraw);
