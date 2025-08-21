@@ -200,28 +200,42 @@ function NauticalRoute_routeModified(event) {
 }
 
 function NauticalRoute_getPoints(points) {
-  // determine deleted index
   let deletedIndex = -1;
-  if (previousPoints.length && previousPoints.length !== points.length) {
+  let addedIndex = -1;
+
+  const inputs = Array.from(document.querySelectorAll("#routeSegmentList input[id^='desc_']"));
+  let currentValues = inputs.map(input => input.value);
+
+  // Detect deletion
+  if (previousPoints.length > points.length) {
     for (let i = 0; i < previousPoints.length; i++) {
       if (!points[i] ||
           Math.abs(points[i].x - previousPoints[i].x) > 1e-6 ||
           Math.abs(points[i].y - previousPoints[i].y) > 1e-6) {
-        deletedIndex = i;
-        deletedIndex--; // adjust because comment belongs to previous segment
+        deletedIndex = i - 1; // adjust for comment
         break;
       }
+    }
+    if (deletedIndex >= 0) {
+      currentValues.splice(deletedIndex, 1); // remove deleted point
+    }
+  }
+  // Detect addition
+  else if (previousPoints.length < points.length) {
+    for (let i = 0; i < previousPoints.length; i++) {
+      if (!points[i] ||
+          Math.abs(points[i].x - previousPoints[i].x) > 1e-6 ||
+          Math.abs(points[i].y - previousPoints[i].y) > 1e-6) {
+        addedIndex = i + 1;
+        break;
+      }
+    }
+    if (addedIndex >= 0) {
+      currentValues.splice(addedIndex, 0, ""); // insert empty placeholder
     }
   }
 
 
-  // store current input values excluding deleted point, renumbered from 0
-  const currentValues = [];
-  document.querySelectorAll("#routeSegmentList input[id^='desc_']").forEach((input, i) => {
-    if (i !== deletedIndex) {
-      currentValues.push(input.value);
-    }
-  });
 
   // store current points for next comparison
   previousPoints = points.map(p => ({ ...p })); // shallow copy
