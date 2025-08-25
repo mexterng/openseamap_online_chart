@@ -306,14 +306,14 @@ function NauticalRoute_getPoints(points) {
 
 function NauticalRoute_getRouteCsv(points) {
   var buffText =
+    "Nr.;" +
+    tableTextNauticalRouteDescription +
     ";" +
     tableTextNauticalRouteCourse +
     ";" +
     tableTextNauticalRouteDistance +
     ";" +
     tableTextNauticalRouteCoordinate +
-    ";" +
-    tableTextNauticalRouteDescription +
     "\n";
   var totalDistance = 0;
 
@@ -321,25 +321,27 @@ function NauticalRoute_getRouteCsv(points) {
     const [lonA, latA] = ol.proj.toLonLat([points[i].x, points[i].y]);
     const [lonB, latB] = ol.proj.toLonLat([points[i + 1].x, points[i + 1].y]);
 
-    const distance = getDistance(latA, latB, lonA, lonB).toFixed(2);
-    const bearing = getBearing(latA, latB, lonA, lonB).toFixed(2);
+    const distance = getDistance(latA, latB, lonA, lonB).toFixed(1);
+    const distance_str = distance.replace(".", ",") 
+
+    const bearing = getBearing(latA, latB, lonA, lonB).toFixed(0);
     totalDistance += parseFloat(distance);
 
     let coordText = "";
     if (document.getElementById("coordFormat").value == "coordFormatdms") {
-      coordText = formatCoords(latB, "N___°##.####'") + " - " + formatCoords(lonB, "W___°##.####'");
+      coordText = formatCoords(latB, "N___°##,####'") + " - " + formatCoords(lonB, "W___°##,####'");
     } else {
-      coordText = formatCoords(latB, "N __.___°") + " - " + formatCoords(lonB, "W___.___°");
+      coordText = formatCoords(latB, "N __,___°") + " - " + formatCoords(lonB, "W___,___°");
     }
 
     const description = document.getElementById("desc_" + i)?.value || "";
 
     buffText +=
       parseInt(i + 1) + ";" +
-      bearing + "°;" +
-      distance + "nm;\"" +
-      coordText + "\";\"" +
-      description + "\"\n";
+      description + ";" +
+      bearing + ";" +
+      distance_str + ";" +
+      coordText + "\n";
   }
 
   return convert2Text(buffText);
