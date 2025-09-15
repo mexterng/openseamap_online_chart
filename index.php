@@ -360,10 +360,12 @@
                 htmlText += "<tr><td id=\"routePoints\" colspan = 2> </td></tr>";
                 htmlText += "</table>";
                 htmlText += "<input type=\"button\" id=\"buttonRouteDownloadTrack\" value=\"<?=$t->tr("download")?>\" onclick=\"NauticalRoute_DownloadTrack();\" disabled=\"true\">";
-                htmlText += "<select id=\"routeFormat\"><option value=\"CSV\"/>CSV<option value=\"GML\"/>GML<option value=\"KML\"/>KML<option value=\"GPX\"/>GPX</select>";
+                htmlText += "<select id=\"routeFormat\"><option value=\"CSV\"/>CSV<option value=\"JSON\"/>JSON<option value=\"GML\"/>GML<option value=\"KML\"/>KML<option value=\"GPX\"/>GPX</select>";
                 htmlText += "<select id=\"coordFormat\" onchange=\"NauticalRoute_getPoints(routeTrack);\"><option value=\"coordFormatdms\"/>ggg°mm.mmm'<option value=\"coordFormatd_dec\"/>ggg.gggggg</select>";
                 htmlText += "<select id=\"distUnits\" onchange=\"NauticalRoute_getPoints(routeTrack);\"><option value=\"nm\"/>[nm]<option value=\"km\"/>[km]</select>";
-
+                htmlText += "<input type=\"button\" id=\"buttonRouteImport\" value=\"<?=$t->tr("import")?>\" " +
+                            "onclick=\"if (!routeChanged || confirm('<?=$t->tr("confirmDeleteRoute")?>')) {" +
+                            "closeNauticalRoute();NauticalRoute_importRouteJson();addNauticalRoute();NauticalRoute_stopEditMode();}\">";
                 showActionDialog(htmlText);
                 NauticalRoute_startEditMode();
             }

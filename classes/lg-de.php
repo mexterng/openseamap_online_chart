@@ -21,6 +21,7 @@ $german = array(
     "close"                  => "Schließen",
     "reload"                 => "Neu Laden",
     "download"               => "Herunterladen",
+    "import"                 => "Importieren",
     "edit"                   => "Bearbeiten",
     "info"                   => "Information",
     "move"                   => "Verschieben",

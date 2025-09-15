@@ -145,6 +145,11 @@ function NauticalRoute_DownloadTrack() {
       filename = name + ".gml";
       content = NauticalRoute_getRouteGml(routeTrack);
       break;
+    case "JSON":
+      mimetype = "application/json";
+      filename = name + "_openseamap.json";
+      content = NauticalRoute_getRouteJson(routeTrack, name);
+      break;
   }
 
   // Remove previous added forms
@@ -429,4 +434,119 @@ function NauticalRoute_getRouteGml(points, descriptions) {
 </gml:featureMember>
 `;
   return gml;
+}
+
+function NauticalRoute_getRouteJson(points, name) {
+  const [lon0, lat0] = ol.proj.toLonLat([points[0].x, points[0].y]);
+  const [lon1, lat1] = ol.proj.toLonLat([points[points.length - 1].x, points[points.length - 1].y]);
+
+  const route = {
+    routeDetails: {
+      routeName: name,
+      routeStart: { lat: lat0, lon: lon0 },
+      routeEnd: { lat: lat1, lon: lon1 },
+      routeDistance: parseFloat(document.getElementById("routeDistance").innerHTML.replace(/[^\d.,]/g, "").replace(",", ".")),
+      distUnit: document.getElementById("distUnits").value,
+    },
+    projection: "EPSG:4326",
+    points: []
+  };
+
+   route.points.push({
+      nr: 0,
+      description: "START",
+      course: 0,
+      distance: 0,
+      lat: parseFloat(lat0),
+      lon: parseFloat(lon0)
+    });
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const [lonA, latA] = ol.proj.toLonLat([points[i].x, points[i].y]);
+    const [lonB, latB] = ol.proj.toLonLat([points[i + 1].x, points[i + 1].y]);
+
+    const distance = parseFloat(getDistance(latA, latB, lonA, lonB));
+    const course = parseFloat(getBearing(latA, latB, lonA, lonB));
+
+    const description = document.getElementById("desc_" + i)?.value || "";
+
+    route.points.push({
+      nr: i + 1,
+      description: description,
+      course: course,
+      distance: distance,
+      lat: parseFloat(latB),
+      lon: parseFloat(lonB)
+    });
+  }
+
+  return JSON.stringify(route, null, 2);
+}
+
+
+function NauticalRoute_importRouteJson() {
+  // Create file input
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json";
+
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = evt => {
+      try {
+        const routeData = JSON.parse(evt.target.result);
+
+        // Check if points exist and route is valid
+        if (!routeData.points || routeData.points.length < 2) {
+          alert("Invalid route in JSON");
+          return;
+        }
+
+        // Transform coordinates from lon/lat to map projection
+        const coords = routeData.points.map(p => ol.proj.fromLonLat([p.lon, p.lat]));
+
+        // Create new feature for the route
+        const feature = new ol.Feature({
+          geometry: new ol.geom.LineString(coords)
+        });
+
+        // Clear layer and add new route
+        layer_nautical_route.getSource().clear();
+        layer_nautical_route.getSource().addFeature(feature);
+
+        // Update global variables
+        routeObject = feature;
+        routeTrack = coords.map(([x, y]) => ({ x, y }));
+
+        // Update table and start/end points
+        NauticalRoute_getPoints(routeTrack);
+
+        // Set all descriptions from JSON, ignoring the start point
+        for (let i = 1; i < routeData.points.length; i++) {
+          const descInput = document.getElementById("desc_" + (i - 1));
+          if (descInput) {
+            descInput.value = routeData.points[i].description || "";
+          }
+        }
+
+        document.getElementById("tripName").value = routeData.routeDetails.routeName;
+
+        // Enable download button
+        document.getElementById("buttonRouteDownloadTrack").disabled = false;
+
+        // Zoom map to fit the route
+        const extent = feature.getGeometry().getExtent();
+        map.getView().fit(extent, { padding: [50, 50, 50, 50], maxZoom: 14 });
+
+      } catch (err) {
+        alert("Error reading the route: " + err);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  input.click();
 }
