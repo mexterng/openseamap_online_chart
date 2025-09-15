@@ -145,6 +145,11 @@ function NauticalRoute_DownloadTrack() {
       filename = name + ".gml";
       content = NauticalRoute_getRouteGml(routeTrack);
       break;
+    case "JSON":
+      mimetype = "application/json";
+      filename = name + "_openseamap.json";
+      content = NauticalRoute_getRouteJson(routeTrack, name);
+      break;
   }
 
   // Remove previous added forms
@@ -429,4 +434,33 @@ function NauticalRoute_getRouteGml(points, descriptions) {
 </gml:featureMember>
 `;
   return gml;
+}
+
+function NauticalRoute_getRouteJson(points, name) {
+  const route = {
+    routeName: name,
+    projection: "EPSG:4326",
+    points: []
+  };
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const [lonA, latA] = ol.proj.toLonLat([points[i].x, points[i].y]);
+    const [lonB, latB] = ol.proj.toLonLat([points[i + 1].x, points[i + 1].y]);
+
+    const distance = parseFloat(getDistance(latA, latB, lonA, lonB));
+    const course = parseFloat(getBearing(latA, latB, lonA, lonB));
+
+    const description = document.getElementById("desc_" + i)?.value || "";
+
+    route.points.push({
+      nr: i + 1,
+      description: description,
+      course: course,
+      distance: distance,
+      lat: parseFloat(latB.toFixed(6)),
+      lon: parseFloat(lonB.toFixed(6))
+    });
+  }
+
+  return JSON.stringify(route, null, 2);
 }
