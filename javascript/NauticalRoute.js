@@ -521,6 +521,9 @@ function NauticalRoute_importRouteJson() {
         routeObject = feature;
         routeTrack = coords.map(([x, y]) => ({ x, y }));
 
+        // Call the same logic as when a new route is drawn
+        NauticalRoute_routeAdded({ feature });
+
         // Update table and start/end points
         NauticalRoute_getPoints(routeTrack);
 
@@ -536,6 +539,10 @@ function NauticalRoute_importRouteJson() {
 
         // Enable download button
         document.getElementById("buttonRouteDownloadTrack").disabled = false;
+
+        routeChanged = true;
+        routeDraw.setActive(false);
+        routeEdit.setActive(true);
 
         // Zoom map to fit the route
         const extent = feature.getGeometry().getExtent();
