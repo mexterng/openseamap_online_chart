@@ -485,4 +485,68 @@ function NauticalRoute_getRouteJson(points, name) {
 
 
 function NauticalRoute_importRouteJson() {
+  // Create file input
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json";
+
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = evt => {
+      try {
+        const routeData = JSON.parse(evt.target.result);
+
+        // Check if points exist and route is valid
+        if (!routeData.points || routeData.points.length < 2) {
+          alert("Invalid route in JSON");
+          return;
+        }
+
+        // Transform coordinates from lon/lat to map projection
+        const coords = routeData.points.map(p => ol.proj.fromLonLat([p.lon, p.lat]));
+
+        // Create new feature for the route
+        const feature = new ol.Feature({
+          geometry: new ol.geom.LineString(coords)
+        });
+
+        // Clear layer and add new route
+        layer_nautical_route.getSource().clear();
+        layer_nautical_route.getSource().addFeature(feature);
+
+        // Update global variables
+        routeObject = feature;
+        routeTrack = coords.map(([x, y]) => ({ x, y }));
+
+        // Update table and start/end points
+        NauticalRoute_getPoints(routeTrack);
+
+        // Set all descriptions from JSON, ignoring the start point
+        for (let i = 1; i < routeData.points.length; i++) {
+          const descInput = document.getElementById("desc_" + (i - 1));
+          if (descInput) {
+            descInput.value = routeData.points[i].description || "";
+          }
+        }
+
+        document.getElementById("tripName").value = routeData.routeDetails.routeName;
+
+        // Enable download button
+        document.getElementById("buttonRouteDownloadTrack").disabled = false;
+
+        // Zoom map to fit the route
+        const extent = feature.getGeometry().getExtent();
+        map.getView().fit(extent, { padding: [50, 50, 50, 50], maxZoom: 14 });
+
+      } catch (err) {
+        alert("Error reading the route: " + err);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  input.click();
 }
