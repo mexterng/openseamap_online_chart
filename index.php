@@ -364,8 +364,8 @@
                 htmlText += "<select id=\"coordFormat\" onchange=\"NauticalRoute_getPoints(routeTrack);\"><option value=\"coordFormatdms\"/>ggg°mm.mmm'<option value=\"coordFormatd_dec\"/>ggg.gggggg</select>";
                 htmlText += "<select id=\"distUnits\" onchange=\"NauticalRoute_getPoints(routeTrack);\"><option value=\"nm\"/>[nm]<option value=\"km\"/>[km]</select>";
                 htmlText += "<input type=\"button\" id=\"buttonRouteImport\" value=\"<?=$t->tr("import")?>\" " +
-                            "onclick=\"if (!routeChanged || confirm('<?=$t->tr("confirmDeleteRoute")?>')) {" +
-                            "closeNauticalRoute();NauticalRoute_importRouteJson();addNauticalRoute();NauticalRoute_stopEditMode();}\">";
+                            "onclick=\"if (typeof routeChanged === 'undefined' || !routeChanged || confirm('<?=$t->tr("confirmDeleteRoute")?>')) {" +
+                            "closeNauticalRoute();NauticalRoute_importRouteJson();}\">";
                 showActionDialog(htmlText);
                 NauticalRoute_startEditMode();
             }
