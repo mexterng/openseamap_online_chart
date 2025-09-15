@@ -489,7 +489,7 @@ function NauticalRoute_importRouteJson() {
   const input = document.createElement("input");
   input.type = "file";
   input.accept = ".json";
-
+  
   input.onchange = e => {
     const file = e.target.files[0];
     if (!file) return;
@@ -546,6 +546,13 @@ function NauticalRoute_importRouteJson() {
       }
     };
     reader.readAsText(file);
+  };
+
+  // Fallback detection for cancel
+  input.onclick = () => {
+    if (!input.files || input.files.length === 0) {
+      addNauticalRoute();
+    }
   };
 
   input.click();
