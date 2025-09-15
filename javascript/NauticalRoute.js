@@ -452,6 +452,15 @@ function NauticalRoute_getRouteJson(points, name) {
     points: []
   };
 
+   route.points.push({
+      nr: 0,
+      description: "START",
+      course: 0,
+      distance: 0,
+      lat: parseFloat(lat0),
+      lon: parseFloat(lon0)
+    });
+
   for (let i = 0; i < points.length - 1; i++) {
     const [lonA, latA] = ol.proj.toLonLat([points[i].x, points[i].y]);
     const [lonB, latB] = ol.proj.toLonLat([points[i + 1].x, points[i + 1].y]);
@@ -466,8 +475,8 @@ function NauticalRoute_getRouteJson(points, name) {
       description: description,
       course: course,
       distance: distance,
-      lat: parseFloat(latB.toFixed(6)),
-      lon: parseFloat(lonB.toFixed(6))
+      lat: parseFloat(latB),
+      lon: parseFloat(lonB)
     });
   }
 
