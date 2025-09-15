@@ -21,6 +21,7 @@ $english = array(
     "close"                  => "Close",
     "reload"                 => "Reload",
     "download"               => "Download",
+    "import"                 => "Import",
     "reload"                 => "Reload",
     "edit"                   => "Edit",
     "info"                   => "Information",

@@ -482,3 +482,7 @@ function NauticalRoute_getRouteJson(points, name) {
 
   return JSON.stringify(route, null, 2);
 }
+
+
+function NauticalRoute_importRouteJson() {
+}
