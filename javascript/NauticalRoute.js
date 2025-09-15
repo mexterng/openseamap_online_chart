@@ -437,8 +437,17 @@ function NauticalRoute_getRouteGml(points, descriptions) {
 }
 
 function NauticalRoute_getRouteJson(points, name) {
+  const [lon0, lat0] = ol.proj.toLonLat([points[0].x, points[0].y]);
+  const [lon1, lat1] = ol.proj.toLonLat([points[points.length - 1].x, points[points.length - 1].y]);
+
   const route = {
-    routeName: name,
+    routeDetails: {
+      routeName: name,
+      routeStart: { lat: lat0, lon: lon0 },
+      routeEnd: { lat: lat1, lon: lon1 },
+      routeDistance: parseFloat(document.getElementById("routeDistance").innerHTML.replace(/[^\d.,]/g, "").replace(",", ".")),
+      distUnit: document.getElementById("distUnits").value,
+    },
     projection: "EPSG:4326",
     points: []
   };
