@@ -122,7 +122,6 @@ async function getNearestSeamarkLabel(lat, lon) {
     console.log(nearest.map(el => ({
       id: el.id,
       raw: el,
-      tags: JSON.stringify(el.tags, null, 2),
       label: formatFeature(el, el.distanceNm)
     })));
 
@@ -133,150 +132,84 @@ async function getNearestSeamarkLabel(lat, lon) {
   }
 }
 
-// TODO: Remove test environment before deploying to production
-const coord = "N 43°49'49\" - E 15°36'01\"";
-
-// Convert DMS string to decimal degrees
-function dmsToDecimal(dmsStr) {
-  const match = dmsStr.match(/([NSEW])\s*(\d+)°(\d+)'(\d+(?:\.\d+)?)"/);
-  if (!match) return null;
-
-  let [, dir, deg, min, sec] = match;
-  deg = parseFloat(deg);
-  min = parseFloat(min);
-  sec = parseFloat(sec);
-
-  let decimal = deg + min / 60 + sec / 3600;
-  if (dir === "S" || dir === "W") decimal = -decimal;
-  return decimal;
-}
-
-// Convert full coordinate string "N 43°49'52\" - E 15°36'04\""
-function parseCoordString(coordStr) {
-  const [latStr, lonStr] = coordStr.split(" - ").map(s => s.trim());
-  const lat = dmsToDecimal(latStr);
-  const lon = dmsToDecimal(lonStr);
-  return { lat, lon };
-}
-
-function formatCoords(coord, format) {
-  function didf(x, di, df, sep, fill) {
-    let s = x.toFixed(df);
-    s = s.replace(/[.,]/, sep);
-    let z = df + di + (df > 0 ? 1 : 0) - s.length;
-    if (z > 0) {
-      /* need to prepend zeros */
-      s = fill.repeat(z) + s;
+async function popupNearestSeamarkLabel(lat, lon, description_id){
+  const options = await getNearestSeamarkLabel(lat, lon); // resolve Promise
+  showDropdownPopup(options, selected => {
+    if (selected !== null) {
+      document.getElementById(description_id).value = selected;
     }
-    return s;
+  });
+}
+
+// Show dropdown in modal and return selected value
+function showDropdownPopup(options, callback) {
+  if (!options || options.length === 0) {
+    alert("No options available.");
+    return;
   }
 
-  // TODO verify if this bug still exists
-  // OL2 had a bug maybe OL7 also (?) where sometimes the coordinates go beyond +-180
-  if (coord > 180) coord -= 360;
-  if (coord < -180) coord += 360;
+  // Create modal background
+  const modalBg = document.createElement("div");
+  modalBg.id = "dropdownNearestSeamarkLabel";
+  modalBg.style.position = "fixed";
+  modalBg.style.top = "0";
+  modalBg.style.left = "0";
+  modalBg.style.width = "100%";
+  modalBg.style.height = "100%";
+  modalBg.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+  modalBg.style.display = "flex";
+  modalBg.style.alignItems = "center";
+  modalBg.style.justifyContent = "center";
+  modalBg.style.zIndex = "9999";
 
-  let a = Math.abs(coord);
-  let deg = Math.trunc(a);
-  let b = 60 * (a - deg);
-  let min = Math.trunc(b);
-  let sec = 60 * (b - min);
+  // Create modal box
+  const modalBox = document.createElement("div");
+  modalBox.style.background = "#fff";
+  modalBox.style.padding = "20px";
+  modalBox.style.borderRadius = "8px";
+  modalBox.style.minWidth = "300px";
+  modalBox.style.boxShadow = "0 2px 10px rgba(0,0,0,0.3)";
 
-  let s = "";
-  let i = 0;
+  // Dropdown
+  const select = document.createElement("select");
+  select.style.width = "100%";
+  select.style.padding = "5px";
 
-  let di = 0;
-  let df = 0;
-  let sep = "";
-  let fill = "#";
+  options.forEach(opt => {
+    const option = document.createElement("option");
+    option.value = opt;
+    option.textContent = opt;
+    select.appendChild(option);
+  });
+  modalBox.appendChild(select);
+  
+  // Button container
+  const btnContainer = document.createElement("div");
+  btnContainer.style.marginTop = "10px";
+  btnContainer.style.display = "flex";
+  btnContainer.style.justifyContent = "space-between";
 
-  do {
-    let c = format.charAt(i);
-    switch (c) {
-      case "N":
-      case "S":
-        s += coord >= 0 ? "N" : "S";
-        i++;
-        sep = "#";
-        break;
-      case "W":
-      case "E":
-        s += coord >= 0 ? "E" : "W";
-        i++;
-        sep = "#";
-        break;
-      case " ":
-        s += " ";
-        i++;
-        sep = "#";
-        break;
-      case "#":
-      case "_":
-        di = 0;
-        df = 0;
-        fill = c == "_" ? " " : "0";
-        do {
-          di++;
-          i++;
-        } while (format.charAt(i) === c);
-        if (format.charAt(i) == "," || format.charAt(i) == ".") {
-          sep = format.charAt(i);
-          i++;
-        } else {
-          continue;
-        }
-        while (format.charAt(i) === c) {
-          df++;
-          i++;
-        }
-        break;
-      case "°":
-        if (fill === "#") {
-          throw "missing format specifier";
-        }
-        /* If decimal places are to be rendered, use the full number.
-               If this is the least significant place, use it to enable rounding */
-        if (df > 0 || !format.includes("'")) {
-          deg = a;
-        }
-        s += didf(deg, di, df, sep, fill) + "°";
-        i++;
-        break;
-      case "'":
-        if (fill === "#") {
-          throw "missing format specifier";
-        }
-        if (!format.includes("°")) throw "malformed format: missing °";
-        if (df > 0 || !format.includes('"')) {
-          min = b;
-        }
-        s += didf(min, di, df, sep, fill) + "'";
-        i++;
-        break;
-      case '"':
-        if (fill === "#") {
-          throw "missing format specifier";
-        }
-        if (!format.includes("'")) throw "malformed format: missing '";
-        s += didf(sec, di, df, sep, fill) + '"';
-        i++;
-        break;
-      default:
-        throw "error in format string:" + c;
-        break;
-    }
-  } while (i < format.length);
-  return s;
+  // OK button
+  const okBtn = document.createElement("button");
+  okBtn.textContent = tableTextNearestSeamarkLabelOk;
+  okBtn.onclick = () => {
+    const selected = select.value;
+    document.body.removeChild(modalBg);
+    if (callback) callback(selected);
+  };
+
+  // Cancel button
+  const cancelBtn = document.createElement("button");
+  cancelBtn.textContent = tableTextNearestSeamarkLabelCancel;
+  cancelBtn.onclick = () => {
+    document.body.removeChild(modalBg);
+    if (callback) callback(null);
+  };
+
+  btnContainer.appendChild(okBtn);
+  btnContainer.appendChild(cancelBtn);
+
+  modalBox.appendChild(btnContainer);
+  modalBg.appendChild(modalBox);
+  document.body.appendChild(modalBg);
 }
-
-const { lat, lon } = parseCoordString(coord);
-console.log("Latitude:", lat, "Longitude:", lon);
-
-
-getNearestSeamarkLabel(lat, lon).then(beacon => {
-  if (beacon) {
-    console.log("Nearest beacon:", beacon);
-  } else {
-    console.log("No beacon found nearby.");
-  }
-});
