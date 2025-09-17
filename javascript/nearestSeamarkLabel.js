@@ -133,6 +133,8 @@ async function getNearestSeamarkLabel(lat, lon) {
 }
 
 async function popupNearestSeamarkLabel(lat, lon, description_id){
+  // Check if a popup already exists
+  if (document.getElementById("dropdownNearestSeamarkLabel")) return;
   const options = await getNearestSeamarkLabel(lat, lon); // resolve Promise
   showDropdownPopup(options, selected => {
     if (selected !== null) {
@@ -156,11 +158,12 @@ function showDropdownPopup(options, callback) {
   modalBg.style.left = "0";
   modalBg.style.width = "100%";
   modalBg.style.height = "100%";
-  modalBg.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+  modalBg.style.backgroundColor = "rgba(0, 0, 0, 0.1)";
   modalBg.style.display = "flex";
   modalBg.style.alignItems = "center";
   modalBg.style.justifyContent = "center";
   modalBg.style.zIndex = "9999";
+  modalBg.style.pointerEvents = "none";
 
   // Create modal box
   const modalBox = document.createElement("div");
@@ -169,6 +172,7 @@ function showDropdownPopup(options, callback) {
   modalBox.style.borderRadius = "8px";
   modalBox.style.minWidth = "300px";
   modalBox.style.boxShadow = "0 2px 10px rgba(0,0,0,0.3)";
+  modalBox.style.pointerEvents = "auto";
 
   // Dropdown
   const select = document.createElement("select");
