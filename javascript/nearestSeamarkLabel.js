@@ -1,21 +1,3 @@
-// helper: distance between two coordinates in meters
-function getDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371000; // Earth radius in meters
-  const toRad = x => (x * Math.PI) / 180;
-  const phi1 = toRad(lat1);
-  const phi2 = toRad(lat2);
-  const dPhi = toRad(lat2 - lat1);
-  const dLamda = toRad(lon2 - lon1);
-
-  // haversine formula
-  const a =
-    Math.sin(dPhi / 2) ** 2 +
-    Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLamda / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c;
-}
-
 // helper: append suffix only if value is defined
 function appendIfDefined(value, suffix) {
   return value ? value + suffix : "";
@@ -110,7 +92,7 @@ async function getNearestSeamarkLabel(lat, lon) {
 
     // compute distance for each element
     data.elements.forEach(el => {
-      el.distanceNm = getDistance(lat, lon, el.lat, el.lon) / 1852; // meters to nautical miles
+      el.distanceNm = getDistance(lat, el.lat, lon, el.lon);
     });
     // sort by distance
     data.elements.sort((a, b) => a.distanceNm - b.distanceNm);
