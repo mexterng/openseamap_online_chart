@@ -271,6 +271,7 @@ function NauticalRoute_getPoints(points) {
               "<th>" + tableTextNauticalRouteDistance + "</th>" +
               "<th>" + tableTextNauticalRouteCoordinate + "</th>" +
               "<th>" + tableTextNauticalRouteDescription + "</th>" + 
+              "<th></th>" + 
               "</tr>";
 
   // loop through points to calculate distance, bearing and render table rows
@@ -291,6 +292,7 @@ function NauticalRoute_getPoints(points) {
               "<td>" + distance.toFixed(2) + " " + distUnits + "</td>" +
               "<td>" + coordFormat(latB, lonB) + "</td>" +
               "<td><input type='text' id='desc_" + i + "' value='" + descValue + "'></td>" +
+              "<td><img src='./resources/action/find_seamark_label.png' width='17' height='17' onclick='(async()=>{await popupNearestSeamarkLabel(" + latB + ", " + lonB + ", \"desc_" + i + "\");})()'></td>" +
               "</tr>";
   }
   htmlText += "</table>";

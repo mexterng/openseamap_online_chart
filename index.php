@@ -29,6 +29,7 @@
         <script type="text/javascript" src="./javascript/geomagjs/cof2Obj.js"></script>
         <script type="text/javascript" src="./javascript/geomagjs/geomag.js"></script>
         <script type="text/javascript" src="./javascript/mag_deviation.js"></script>
+        <script type="text/javascript" src="./javascript/nearestSeamarkLabel.js"></script>
         <script type="text/javascript">
 
             <?php
@@ -69,6 +70,10 @@
             var tableTextNauticalRouteCourse = "<?=$t->tr('course')?>";
             var tableTextNauticalRouteDistance = "<?=$t->tr('distance')?>";
             var tableTextNauticalRouteDescription = "<?=$t->tr('description')?>";
+
+            // FIXME: Work around for accessing translations from nearestSeamarkLabel.js
+            var tableTextNearestSeamarkLabelOk = "<?=$t->tr('ok')?>";
+            var tableTextNearestSeamarkLabelCancel = "<?=$t->tr('cancel')?>";
 
             // Set language
             var language = "<?=$t->getCurrentLanguage()?>";
