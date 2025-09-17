@@ -1,0 +1,282 @@
+// helper: distance between two coordinates in meters
+function getDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371000; // Earth radius in meters
+  const toRad = x => (x * Math.PI) / 180;
+  const phi1 = toRad(lat1);
+  const phi2 = toRad(lat2);
+  const dPhi = toRad(lat2 - lat1);
+  const dLamda = toRad(lon2 - lon1);
+
+  // haversine formula
+  const a =
+    Math.sin(dPhi / 2) ** 2 +
+    Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLamda / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+}
+
+// helper: append suffix only if value is defined
+function appendIfDefined(value, suffix) {
+  return value ? value + suffix : "";
+}
+
+function formatFeature(el, distanceNm) {
+  distanceNm = distanceNm.toFixed(1);
+  const tags = el.tags || {};
+  const type = tags["seamark:type"] || tags.man_made || tags.place;
+
+  // Lighthouses / Lights
+  if (type === "lighthouse" || type === "light_minor" || type === "light_major") {
+    let lightStr = "";
+    if (tags["seamark:light:character"]) {
+      let colour = appendIfDefined(tags["seamark:light:colour"][0].toUpperCase(), ".");
+      if (colour === "W."){
+        colour = "";
+      }
+      const period = appendIfDefined(tags["seamark:light:period"], "s");
+      const height = appendIfDefined(tags["seamark:light:height"], "m");
+      const range  = appendIfDefined(tags["seamark:light:range"], "M");
+      lightStr = `; ${tags["seamark:light:character"]}.${colour}${period}${height}${range}`;
+    }
+    return `${tags["seamark:name"] || "Unnamed Light"}${lightStr} (${distanceNm} sm)`;
+  }
+
+  // Lateral beacons
+  if (type === "beacon_lateral") {
+    let lightStr = "";
+    if (tags["seamark:light:character"]) {
+      let colour = appendIfDefined(tags["seamark:light:colour"][0].toUpperCase(), ".");
+      if (colour === "W."){
+        colour = "";
+      }
+      const period = appendIfDefined(tags["seamark:light:period"], "s");
+      lightStr = `; ${tags["seamark:light:character"]}.${colour}${period}`;
+    }
+    return `Beacon ${tags["seamark:beacon_lateral:category"] || ""}${lightStr} (${distanceNm} sm)`;
+  }
+
+  // Other beacons / buoys
+  if (type && type.startsWith("beacon")) {
+    return `Beacon (${distanceNm} sm)`;
+  }
+
+  // Cities / Islands
+  if (tags.place) {
+    return `${tags.name} (${distanceNm} sm)`;
+  }
+
+  // Fallback
+  return `Unknown (${distanceNm} sm)`;
+}
+
+// Function: find nearest navigation feature
+async function getNearestSeamarkLabel(lat, lon) {
+  const radius = 5000; // search radius in meters
+  const query = `
+    [out:json];
+    (
+      // Lighthouses
+      node["man_made"="lighthouse"](around:${radius},${lat},${lon});
+
+      // Lights
+      node["seamark:type"="light_major"](around:${radius},${lat},${lon});
+      node["seamark:type"="light_minor"](around:${radius},${lat},${lon});
+
+      // Buoys
+      node["seamark:type"="buoy"](around:${radius},${lat},${lon});
+
+      // Beacons
+      node["seamark:type"="beacon_cardinal"](around:${radius},${lat},${lon});
+      node["seamark:type"="beacon_lateral"](around:${radius},${lat},${lon});
+      node["seamark:type"="beacon_isolated_danger"](around:${radius},${lat},${lon});
+
+      // Cities & villages
+      node["place"~"city|town|village"]["name"](around:${radius},${lat},${lon});
+
+      // Islands (als node, way, relation)
+      node["place"~"island|islet"]["name"](around:${radius},${lat},${lon});
+      way["place"~"island|islet"]["name"](around:${radius},${lat},${lon});
+      relation["place"~"island|islet"]["name"](around:${radius},${lat},${lon});
+    );
+    out body;
+  `;
+  const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    if (!data.elements || data.elements.length === 0) return [];
+
+    // compute distance for each element
+    data.elements.forEach(el => {
+      el.distanceNm = getDistance(lat, lon, el.lat, el.lon) / 1852; // meters to nautical miles
+    });
+    // sort by distance
+    data.elements.sort((a, b) => a.distanceNm - b.distanceNm);
+
+    // take 10 nearest and format
+    nearest = data.elements.slice(0, 10);
+
+    // TODO: delete console log in production
+    console.log(nearest.map(el => ({
+      id: el.id,
+      raw: el,
+      tags: JSON.stringify(el.tags, null, 2),
+      label: formatFeature(el, el.distanceNm)
+    })));
+
+    return nearest.map(el => formatFeature(el, el.distanceNm));
+  } catch (err) {
+    console.error("Error fetching nearest seamark label:", err);
+    return null;
+  }
+}
+
+// TODO: Remove test environment before deploying to production
+const coord = "N 43°49'49\" - E 15°36'01\"";
+
+// Convert DMS string to decimal degrees
+function dmsToDecimal(dmsStr) {
+  const match = dmsStr.match(/([NSEW])\s*(\d+)°(\d+)'(\d+(?:\.\d+)?)"/);
+  if (!match) return null;
+
+  let [, dir, deg, min, sec] = match;
+  deg = parseFloat(deg);
+  min = parseFloat(min);
+  sec = parseFloat(sec);
+
+  let decimal = deg + min / 60 + sec / 3600;
+  if (dir === "S" || dir === "W") decimal = -decimal;
+  return decimal;
+}
+
+// Convert full coordinate string "N 43°49'52\" - E 15°36'04\""
+function parseCoordString(coordStr) {
+  const [latStr, lonStr] = coordStr.split(" - ").map(s => s.trim());
+  const lat = dmsToDecimal(latStr);
+  const lon = dmsToDecimal(lonStr);
+  return { lat, lon };
+}
+
+function formatCoords(coord, format) {
+  function didf(x, di, df, sep, fill) {
+    let s = x.toFixed(df);
+    s = s.replace(/[.,]/, sep);
+    let z = df + di + (df > 0 ? 1 : 0) - s.length;
+    if (z > 0) {
+      /* need to prepend zeros */
+      s = fill.repeat(z) + s;
+    }
+    return s;
+  }
+
+  // TODO verify if this bug still exists
+  // OL2 had a bug maybe OL7 also (?) where sometimes the coordinates go beyond +-180
+  if (coord > 180) coord -= 360;
+  if (coord < -180) coord += 360;
+
+  let a = Math.abs(coord);
+  let deg = Math.trunc(a);
+  let b = 60 * (a - deg);
+  let min = Math.trunc(b);
+  let sec = 60 * (b - min);
+
+  let s = "";
+  let i = 0;
+
+  let di = 0;
+  let df = 0;
+  let sep = "";
+  let fill = "#";
+
+  do {
+    let c = format.charAt(i);
+    switch (c) {
+      case "N":
+      case "S":
+        s += coord >= 0 ? "N" : "S";
+        i++;
+        sep = "#";
+        break;
+      case "W":
+      case "E":
+        s += coord >= 0 ? "E" : "W";
+        i++;
+        sep = "#";
+        break;
+      case " ":
+        s += " ";
+        i++;
+        sep = "#";
+        break;
+      case "#":
+      case "_":
+        di = 0;
+        df = 0;
+        fill = c == "_" ? " " : "0";
+        do {
+          di++;
+          i++;
+        } while (format.charAt(i) === c);
+        if (format.charAt(i) == "," || format.charAt(i) == ".") {
+          sep = format.charAt(i);
+          i++;
+        } else {
+          continue;
+        }
+        while (format.charAt(i) === c) {
+          df++;
+          i++;
+        }
+        break;
+      case "°":
+        if (fill === "#") {
+          throw "missing format specifier";
+        }
+        /* If decimal places are to be rendered, use the full number.
+               If this is the least significant place, use it to enable rounding */
+        if (df > 0 || !format.includes("'")) {
+          deg = a;
+        }
+        s += didf(deg, di, df, sep, fill) + "°";
+        i++;
+        break;
+      case "'":
+        if (fill === "#") {
+          throw "missing format specifier";
+        }
+        if (!format.includes("°")) throw "malformed format: missing °";
+        if (df > 0 || !format.includes('"')) {
+          min = b;
+        }
+        s += didf(min, di, df, sep, fill) + "'";
+        i++;
+        break;
+      case '"':
+        if (fill === "#") {
+          throw "missing format specifier";
+        }
+        if (!format.includes("'")) throw "malformed format: missing '";
+        s += didf(sec, di, df, sep, fill) + '"';
+        i++;
+        break;
+      default:
+        throw "error in format string:" + c;
+        break;
+    }
+  } while (i < format.length);
+  return s;
+}
+
+const { lat, lon } = parseCoordString(coord);
+console.log("Latitude:", lat, "Longitude:", lon);
+
+
+getNearestSeamarkLabel(lat, lon).then(beacon => {
+  if (beacon) {
+    console.log("Nearest beacon:", beacon);
+  } else {
+    console.log("No beacon found nearby.");
+  }
+});
