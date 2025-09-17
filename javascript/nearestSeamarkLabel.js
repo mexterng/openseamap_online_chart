@@ -1,6 +1,6 @@
 // helper: distance between two coordinates in meters
 function getDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371000; // Earth radius in meters
+  const R = earthRadius * 1000; // earthRadius in kilometers
   const toRad = x => (x * Math.PI) / 180;
   const phi1 = toRad(lat1);
   const phi2 = toRad(lat2);
@@ -110,7 +110,7 @@ async function getNearestSeamarkLabel(lat, lon) {
 
     // compute distance for each element
     data.elements.forEach(el => {
-      el.distanceNm = getDistance(lat, lon, el.lat, el.lon) / 1852; // meters to nautical miles
+      el.distanceNm = km2nm(getDistance(lat, lon, el.lat, el.lon)/1000); // meters to nautical miles
     });
     // sort by distance
     data.elements.sort((a, b) => a.distanceNm - b.distanceNm);
