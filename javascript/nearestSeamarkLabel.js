@@ -6,7 +6,7 @@ function appendIfDefined(value, suffix) {
 function formatFeature(el, distanceNm) {
   distanceNm = distanceNm.toFixed(1);
   const tags = el.tags || {};
-  const type = tags["seamark:type"] || tags.man_made || tags.place;
+  const type = tags["seamark:type"] || tags.man_made || tags.place || tags.natural;
 
   // Lighthouses / Lights
   if (type === "lighthouse" || type === "light_minor" || type === "light_major") {
@@ -43,8 +43,8 @@ function formatFeature(el, distanceNm) {
     return `Beacon (${distanceNm} sm)`;
   }
 
-  // Cities / Islands
-  if (tags.place) {
+  // Cities / Islands / Capes
+  if (tags.place || tags.natural) {
     return `${tags.name} (${distanceNm} sm)`;
   }
 
@@ -58,6 +58,9 @@ async function getNearestSeamarkLabel(lat, lon) {
   const query = `
     [out:json];
     (
+      // Capes
+      node["natural"="cape"](around:${radius},${lat},${lon});
+
       // Lighthouses
       node["man_made"="lighthouse"](around:${radius},${lat},${lon});
 
