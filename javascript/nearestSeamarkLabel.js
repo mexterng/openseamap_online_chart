@@ -21,7 +21,7 @@ function formatFeature(el, distanceNm) {
       const period = appendIfDefined(tags["seamark:light:period"], "s");
       const height = appendIfDefined(tags["seamark:light:height"], "m");
       const range  = appendIfDefined(tags["seamark:light:range"], "M");
-      lightStr = `; ${tags["seamark:light:character"]}.${colour}${period}${height}${range}`;
+      lightStr = `, ${tags[tag_str + "character"]}.${colour}${period}${height}${range}`;
     }
     return `${tags["seamark:name"] || "Unnamed Light"}${lightStr} (${distanceNm} sm)`;
   }
@@ -35,7 +35,7 @@ function formatFeature(el, distanceNm) {
         colour = "";
       }
       const period = appendIfDefined(tags["seamark:light:period"], "s");
-      lightStr = `; ${tags["seamark:light:character"]}.${colour}${period}`;
+      lightStr = `, ${tags["seamark:light:character"]}.${colour}${period}`;
     }
     return `Beacon ${tags["seamark:beacon_lateral:category"] || ""}${lightStr} (${distanceNm} sm)`;
   }
