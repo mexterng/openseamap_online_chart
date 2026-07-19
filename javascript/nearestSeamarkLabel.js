@@ -6,24 +6,28 @@ function appendIfDefined(value, suffix) {
 }
 
 function formatFeature(el, distanceNm) {
-  distanceNm = distanceNm.toFixed(1);
+  const distanceNm_str = distanceNm.toFixed(1);
   const tags = el.tags || {};
   const type = tags["seamark:type"] || tags.man_made || tags.place || tags.natural;
 
   // Lighthouses / Lights
   if (type === "lighthouse" || type === "light_minor" || type === "light_major") {
     let lightStr = "";
-    if (tags["seamark:light:character"]) {
-      let colour = appendIfDefined(tags["seamark:light:colour"][0].toUpperCase(), ".");
+    tag_str = "seamark:light:"
+    if (tags["seamark:light:1:character"]) {
+      tag_str = tag_str + "1:"
+    }
+    if (tags[tag_str + "character"]) {
+      let colour = appendIfDefined(tags[tag_str + "colour"][0].toUpperCase(), ".");
       if (colour === "W."){
         colour = "";
       }
-      const period = appendIfDefined(tags["seamark:light:period"], "s");
-      const height = appendIfDefined(tags["seamark:light:height"], "m");
-      const range  = appendIfDefined(tags["seamark:light:range"], "M");
-      lightStr = `; ${tags["seamark:light:character"]}.${colour}${period}${height}${range}`;
+      const period = appendIfDefined(tags[tag_str + "period"], "s");
+      const height = appendIfDefined(tags[tag_str + "height"], "m");
+      const range  = appendIfDefined(tags[tag_str + "range"], "M");
+      lightStr = `, ${tags[tag_str + "character"]}.${colour}${period}${height}${range}`;
     }
-    return `${tags["seamark:name"] || "Unnamed Light"}${lightStr} (${distanceNm} sm)`;
+    return `${tags["int_name"] || tags["seamark:int_name"] || tags["seamark:name"] || "Unnamed Light"}${lightStr} (${distanceNm_str} sm)`;
   }
 
   // Lateral beacons
@@ -35,23 +39,24 @@ function formatFeature(el, distanceNm) {
         colour = "";
       }
       const period = appendIfDefined(tags["seamark:light:period"], "s");
-      lightStr = `; ${tags["seamark:light:character"]}.${colour}${period}`;
+      lightStr = `, ${tags["seamark:light:character"]}.${colour}${period}`;
     }
-    return `Beacon ${tags["seamark:beacon_lateral:category"] || ""}${lightStr} (${distanceNm} sm)`;
+    return `Beacon ${tags["seamark:beacon_lateral:category"] || ""}${lightStr} (${distanceNm_str} sm)`;
   }
 
   // Other beacons / buoys
   if (type && type.startsWith("beacon")) {
-    return `Beacon (${distanceNm} sm)`;
+    return `Beacon (${distanceNm_str} sm)`;
   }
 
   // Cities / Islands / Capes
   if (tags.place || tags.natural) {
-    return `${tags.name} (${distanceNm} sm)`;
+    const nameStr = tags["int_name"] || tags["name:en"] || tags["name"];
+    return `${nameStr}${Number.isNaN(distanceNm) ? "" : ` (${distanceNm_str} sm)`}`;
   }
 
   // Fallback
-  return `Unknown (${distanceNm} sm)`;
+  return `Unknown (${distanceNm_str} sm)`;
 }
 
 // Function: find nearest navigation feature

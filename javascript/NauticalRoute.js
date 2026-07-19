@@ -128,7 +128,7 @@ function NauticalRoute_DownloadTrack() {
     case "CSV":
       mimetype = "text/csv";
       filename = name + ".csv";
-      content = NauticalRoute_getRouteCsv(routeTrack);
+      content = "\uFEFF" + NauticalRoute_getRouteCsv(routeTrack);
       break;
     case "KML":
       mimetype = "application/vnd.google-earth.kml+xml";
@@ -346,7 +346,7 @@ function NauticalRoute_getRouteCsv(points) {
     buffText +=
       parseInt(i + 1) + ";" +
       description + ";" +
-      bearing + ";" +
+      bearing + "°;" +
       distance_str + ";" +
       coordText + "\n";
   }
