@@ -1,8 +1,13 @@
 services:
-  web:
-    image: richarvey/nginx-php-fpm:latest
-    ports:
-      - "8080:80"
+  web_seamap:
+    image: docker.io/richarvey/nginx-php-fpm:latest
+    container_name: web_seamap
     volumes:
       - ./:/var/www/html
-    container_name: web
+    networks:
+      - web_seamap_net
+    restart: always
+
+networks:
+  web_seamap_net:
+    driver: bridge
