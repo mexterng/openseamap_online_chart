@@ -115,6 +115,37 @@ function NauticalRoute_stopEditMode() {
   layer_nautical_route.getSource().clear();
 }
 
+
+function NauticalRoute_getRouteJpg(feature, name) {
+  // Zoom map to fit the route
+  const extent = feature.getGeometry().getExtent();
+  map.getView().fit(extent, { padding: [50, 50, 50, 50], maxZoom: 14 });
+
+  // Export map as JPEG
+  map.once('rendercomplete', () => {
+    const mapCanvas = document.createElement('canvas');
+    const size = map.getSize();
+    const scale = 2; // double resolution
+    mapCanvas.width = size[0] * scale;
+    mapCanvas.height = size[1] * scale;
+    const mapContext = mapCanvas.getContext('2d');
+
+    map.getViewport().querySelectorAll('canvas').forEach(function(canvas) {
+      mapContext.drawImage(canvas, 0, 0, mapCanvas.width, mapCanvas.height);
+    });
+
+    // Convert to JPEG
+    mapCanvas.toBlob((blob) => {
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = name + '.jpg';
+      link.click();
+    }, 'image/jpeg', 0.95); // Qualität 0.95
+  });
+
+  map.renderSync(); // Trigger render
+}
+
 function NauticalRoute_DownloadTrack() {
   var format = document.getElementById("routeFormat").value;
   var name = document.getElementById("tripName").value;
@@ -150,6 +181,9 @@ function NauticalRoute_DownloadTrack() {
       filename = name + "_openseamap.json";
       content = NauticalRoute_getRouteJson(routeTrack, name);
       break;
+    case "JPG":
+      NauticalRoute_getRouteJpg(routeObject, name);
+      return;
   }
 
   // Remove previous added forms
